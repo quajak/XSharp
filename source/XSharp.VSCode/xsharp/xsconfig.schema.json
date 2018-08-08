@@ -1,0 +1,26 @@
+{
+    "title": "JSON Schema for X# Config files",
+    "description": "This is the JSON schema for X# config files. By default X# only runs all XS files in the root folder non-recursively.",
+    "$schema": "http://json-schema.org/draft-04/schema",
+    "type": "object",
+    "properties": {
+        "excludeFiles": {
+            "type": "array",
+            "description": "The xs files in the directory that should be excluded from compiling.",
+            "items": {
+                "type": "string",
+                "description": "A single file name",
+                "default": ""
+            }
+        },
+        "includeDirectories": {
+            "type": "array",
+            "description": "Directories that have to be included when compiling with X#",
+            "items": {
+                "type": "string",
+                "description": "The directory that has to be included when compiling.",
+                "default": ""
+            }
+        }
+    }
+}

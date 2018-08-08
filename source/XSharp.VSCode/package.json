@@ -63,6 +63,16 @@
                 ],
                 "configuration": "xsharp/language-configuration.json"
             }
+        ],
+        "jsonValidation": [
+            {
+                "fileMatch": "xsconfig.json",
+                "url": "./xsharp/xsconfig.schema.json"
+            },
+            {
+                "fileMatch": "launch.json",
+                "url": "./xsharp/launch.schema.json"
+            }
         ]
     },
     "scripts": {
