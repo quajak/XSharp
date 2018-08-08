@@ -13,7 +13,7 @@
         "vscode": "^1.10.0"
     },
     "categories": [
-        "Languages"
+        "Programming Languages"
     ],
     "activationEvents": [
         "onLanguage:xsharp"
@@ -25,7 +25,7 @@
             "properties": {
                 "xsharp.compileOnSave": {
                     "type": "boolean",
-                    "default": "false",
+                    "default": false,
                     "description": "Compile X# files when they're saved."
                 },
                 "xsharp.compileOutputPath": {
@@ -55,8 +55,12 @@
         "languages": [
             {
                 "id": "xsharp",
-                "aliases": ["X#"],
-                "extensions": [".xs"],
+                "aliases": [
+                    "X#"
+                ],
+                "extensions": [
+                    ".xs"
+                ],
                 "configuration": "xsharp/language-configuration.json"
             }
         ]

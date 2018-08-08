@@ -17,23 +17,38 @@ let storagePath: string;
 let compileOnSave: boolean;
 let compileOutputPath: string;
 
+// Channel for output
+let channel: vscode.OutputChannel;
+
 export function activate(context: vscode.ExtensionContext) {
-    //compilerPath = context.asAbsolutePath("compiler/xsc.exe");
+
+    channel = vscode.window.createOutputChannel("X# tools");
+    channel.show();
+
+    // compilerPath = context.asAbsolutePath("D:/Coding/OS/Cosmos/XSharp/source/XSharp.Compiler/bin/Debug/net471/xsc.exe");
+    compilerPath ="D:\\Coding\\OS\\Cosmos\\XSharp\\source\\XSharp.Compiler\\bin\\Debug\\net471\\xsc.exe";
 
     storagePath = context.storagePath != undefined ? context.storagePath : context.extensionPath;
 
     compileOnSave = vscode.workspace.getConfiguration("xsharp").get<boolean>("compileOnSave");
     compileOutputPath = vscode.workspace.getConfiguration("xsharp").get<string>("compileOutputPath");
 
+    channel.appendLine("Loading X# extension");
+    channel.appendLine(`Compiler Path: ${compilerPath}`)
+    channel.appendLine(`Storage path: ${storagePath}`)
+    channel.appendLine(`Compile on Save: ${compileOnSave}`)
+    channel.appendLine(`Compile output path: ${compileOutputPath}`)
+
     let languageCompileFile = vscode.commands.registerTextEditorCommand("xsharp.compileFile", function (textEditor) {
         if (vscode.languages.match("xsharp", textEditor.document)) {
+
             let unsaved: boolean = false;
 
             if (textEditor.document.isDirty) {
                 unsaved = true;
             }
 
-            compileDocument(textEditor.document, true);
+            compileDocument(textEditor.document, unsaved);
         }
     });
 
@@ -97,11 +112,13 @@ export function activate(context: vscode.ExtensionContext) {
             parseFunctions(e);
 
             if (compileOnSave) {
+                channel.appendLine("Compiling on save");
                 compileDocument(e);
             }
         }
     });
 
+    // Provide the tooktip when hovering.
     let languageHoverProvider = vscode.languages.registerHoverProvider("xsharp", {
         provideHover(document, position, token) {
             let text = document.getText(document.getWordRangeAtPosition(position, /\w+/g));
@@ -120,6 +137,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
+    // function to trigger code completion.
     let languageCompletionProvider = vscode.languages.registerCompletionItemProvider("xsharp", {
         provideCompletionItems(document, position, token) {
             let completionList = new vscode.CompletionList();
@@ -134,6 +152,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }, "");
 
+    // Function to provide F12 Jump to definition functionality
     let languageSymbolDefinitions = vscode.languages.registerDefinitionProvider("xsharp", {
         provideDefinition(document, position, token) {
             let functionWordRange = document.getWordRangeAtPosition(position, /\w+(?=\(\))/g);
@@ -180,6 +199,11 @@ export function activate(context: vscode.ExtensionContext) {
     //     }
     // }, "*", EOL);
 
+    context.subscriptions.push(languageCompileFile);
+    context.subscriptions.push(languageCompileAllFiles);
+
+    context.subscriptions.push(channel);
+    
     context.subscriptions.push(languageOnActiveTextEditorChanged);
     context.subscriptions.push(languageOnTextSelectionChanged);
     context.subscriptions.push(languageOnDocumentOpened);
@@ -188,6 +212,8 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(languageCompletionProvider);
     context.subscriptions.push(languageSymbolDefinitions);
     //context.subscriptions.push(languageOnTypeFormattingEditProvider);
+
+    channel.appendLine("X# extension load complete.");
 }
 
 export function deactivate() {
@@ -231,7 +257,9 @@ function parseFunctions(document: vscode.TextDocument) {
 
 function compileDocument(document: vscode.TextDocument, unsaved: boolean = false) {
     let inputPath: string;
+    channel.appendLine(`Compiling file: ${document.fileName}`);
 
+    // If the file in unsaved, we make a temporary copy.
     if (unsaved) {
         if (!fs.existsSync(storagePath)) {
             fs.mkdir(storagePath);
@@ -250,11 +278,33 @@ function compileDocument(document: vscode.TextDocument, unsaved: boolean = false
     }
 
     try {
-        cp.exec(compilerPath + " -inputFile '" + inputPath + "' -outputFile '" + path.join(compileOutputPath, path.basename(inputPath).replace(".xs", ".asm")) + "'");
+        var outputFileName = compileOutputPath == "" ? inputPath.replace(".xs", ".asm") : path.join(compileOutputPath, path.basename(inputPath).replace(".xs", ".asm"));
+        let compileCommand = compilerPath + " " + inputPath + " -Out:" + outputFileName;
+        console.log("Running command: " + compileCommand);
+
+        cp.exec(compileCommand, (error: Error, stdout: string, stderr: string) => {
+
+            if (error != null)
+            {
+                channel.appendLine(`Compiling file: ${document.fileName}. Error: ${error.message}`);
+            }
+            if (stdout != null && stdout != "")
+            {
+                channel.appendLine(`Compiling file: ${document.fileName}. StdOut: ${stdout}`);
+            }
+            if (stderr != null && stderr != "")
+            {
+                channel.appendLine(`Compiling file: ${document.fileName}. StdErr: ${stderr}`);
+            }
+
+            if (unsaved) {
+                fs.unlinkSync(inputPath);
+            }
+        });
     }
-    finally {
+    catch {
         if (unsaved) {
-            fs.unlink(inputPath);
+            fs.unlinkSync(inputPath);
         }
     }
 }
